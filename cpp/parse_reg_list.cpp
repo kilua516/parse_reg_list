@@ -2,8 +2,514 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <list>
 
 using namespace std;
+
+class reg_element
+{
+protected:
+    int st_bit;
+    int ed_bit;
+    int bus_st_bit;
+    int bus_ed_bit;
+    string attr;
+    int def_val;
+public:
+    int set_st_bit(int st_bit);
+    int set_ed_bit(int ed_bit);
+    int set_bus_st_bit(int bus_st_bit);
+    int set_bus_ed_bit(int bus_ed_bit);
+    int set_attr(string attr);
+    int set_def_val(int def_val);
+    int get_st_bit();
+    int get_ed_bit();
+    int get_bus_st_bit();
+    int get_bus_ed_bit();
+    string get_attr();
+    int get_def_val();
+};
+
+class reg_base_name_item:public reg_element
+{
+protected:
+    int addr;
+public:
+    int set_addr(int addr);
+    int get_addr();
+};
+
+class reg_base_addr_item:public reg_element
+{
+protected:
+    string name;
+public:
+    int set_name(string name);
+    string get_name();
+};
+
+class reg_base_name
+{
+protected:
+    string name;
+    int sub_num;
+    reg_base_name_item *item;
+public:
+    reg_base_name();
+    reg_base_name(const reg_base_name &tmp);
+    ~reg_base_name();
+    reg_base_name &operator=(const reg_base_name &tmp);
+    string get_name();
+    int create(string name    ,
+               int addr       ,
+               int st_bit     ,
+               int ed_bit     ,
+               int bus_st_bit ,
+               int bus_ed_bit ,
+               string attr    ,
+               int def_val    );
+    int append(int addr       ,
+               int st_bit     ,
+               int ed_bit     ,
+               int bus_st_bit ,
+               int bus_ed_bit ,
+               string attr    ,
+               int def_val    );
+};
+
+class reg_base_addr
+{
+protected:
+    int addr;
+    int sub_num;
+    reg_base_addr_item *item;
+public:
+    reg_base_addr();
+    reg_base_addr(const reg_base_addr &tmp);
+    ~reg_base_addr();
+    reg_base_addr &operator=(const reg_base_addr &tmp);
+    int create(string name    ,
+               int addr       ,
+               int st_bit     ,
+               int ed_bit     ,
+               int bus_st_bit ,
+               int bus_ed_bit ,
+               string attr    ,
+               int def_val    );
+    int append(string name    ,
+               int st_bit     ,
+               int ed_bit     ,
+               int bus_st_bit ,
+               int bus_ed_bit ,
+               string attr    ,
+               int def_val    );
+};
+
+int reg_element::set_st_bit(int st_bit)
+{
+    this->st_bit = st_bit;
+    return 0;
+}
+
+int reg_element::set_ed_bit(int ed_bit)
+{
+    this->ed_bit = ed_bit;
+    return 0;
+}
+
+int reg_element::set_bus_st_bit(int bus_st_bit)
+{
+    this->bus_st_bit = bus_st_bit;
+    return 0;
+}
+
+int reg_element::set_bus_ed_bit(int bus_ed_bit)
+{
+    this->bus_ed_bit = bus_ed_bit;
+    return 0;
+}
+
+int reg_element::set_attr(string attr)
+{
+    this->attr = attr;
+    return 0;
+}
+
+int reg_element::set_def_val(int def_val)
+{
+    this->def_val = def_val;
+    return 0;
+}
+
+
+int reg_element::get_st_bit()
+{
+    return st_bit;
+}
+
+int reg_element::get_ed_bit()
+{
+    return ed_bit;
+}
+
+int reg_element::get_bus_st_bit()
+{
+    return bus_st_bit;
+}
+
+int reg_element::get_bus_ed_bit()
+{
+    return bus_ed_bit;
+}
+
+string reg_element::get_attr()
+{
+    return attr;
+}
+
+int reg_element::get_def_val()
+{
+    return def_val;
+}
+
+int reg_base_name_item::set_addr(int addr)
+{
+    this->addr = addr;
+    return 0;
+}
+
+int reg_base_name_item::get_addr()
+{
+    return addr;
+}
+
+int reg_base_addr_item::set_name(string name)
+{
+    this->name = name;
+    return 0;
+}
+
+string reg_base_addr_item::get_name()
+{
+    return name;
+}
+
+reg_base_name::reg_base_name()
+{
+    name = "";
+    sub_num = 0;
+    item = NULL;
+}
+
+reg_base_name::reg_base_name(const reg_base_name &tmp)
+{
+    name = tmp.name;
+    sub_num = tmp.sub_num;
+    item = new reg_base_name_item[sub_num];
+    for (int i = 0; i < sub_num; i++)
+    {
+        item[i] = tmp.item[i];
+    }
+}
+
+reg_base_name::~reg_base_name()
+{
+    if (sub_num != 0)
+    {
+        delete[] item;
+    }
+}
+
+reg_base_name &reg_base_name::operator=(const reg_base_name &tmp)
+{
+    if (this == &tmp)
+    {
+        return *this;
+    }
+    if (sub_num != 0)
+    {
+        delete[] item;
+    }
+    name = tmp.name;
+    sub_num = tmp.sub_num;
+    item = new reg_base_name_item[sub_num];
+    for (int i = 0; i < sub_num; i++)
+    {
+        item[i] = tmp.item[i];
+    }
+
+    return *this;
+}
+
+string reg_base_name::get_name()
+{
+    return name;
+}
+
+int reg_base_name::create(string name    ,
+                          int addr       ,
+                          int st_bit     ,
+                          int ed_bit     ,
+                          int bus_st_bit ,
+                          int bus_ed_bit ,
+                          string attr    ,
+                          int def_val    )
+{
+    if (sub_num != 0)
+    {
+        return 1;
+    }
+    this->name = name;
+    this->sub_num = 1;
+    item = new reg_base_name_item;
+    item->set_addr(addr);
+    item->set_st_bit(st_bit);
+    item->set_ed_bit(ed_bit);
+    item->set_bus_st_bit(bus_st_bit);
+    item->set_bus_ed_bit(bus_ed_bit);
+    item->set_attr(attr);
+    item->set_def_val(def_val);
+
+    return 0;
+}
+
+int reg_base_name::append(int addr       ,
+                          int st_bit     ,
+                          int ed_bit     ,
+                          int bus_st_bit ,
+                          int bus_ed_bit ,
+                          string attr    ,
+                          int def_val    )
+{
+    int insert_pos;
+    reg_base_name_item *item_new;
+
+    for (int i = 0; i < sub_num; i++)
+    {
+        if ((item[i].get_addr() == addr) &&
+            (item[i].get_bus_st_bit() == (bus_ed_bit+1)) &&
+            (item[i].get_st_bit() == (ed_bit+1)) &&
+            (item[i].get_attr() == attr))
+        {
+            // direct merge
+            item[i].set_bus_st_bit(bus_st_bit);
+            item[i].set_st_bit(st_bit);
+            item[i].set_def_val((item[i].get_def_val() << (bus_ed_bit-bus_st_bit+1)) | def_val);
+            return 0;
+        }
+        else if ((item[i].get_addr() == addr) &&
+                 (item[i].get_bus_ed_bit() == (bus_st_bit-1)) &&
+                 (item[i].get_ed_bit() == (st_bit-1)) &&
+                 (item[i].get_attr() == attr))
+        {
+            // direct merge
+            item[i].set_bus_ed_bit(bus_ed_bit);
+            item[i].set_ed_bit(ed_bit);
+            item[i].set_def_val((def_val << (item[i].get_bus_ed_bit()-item[i].get_bus_st_bit()+1)) | item[i].get_def_val());
+            return 0;
+        }
+        else if (item[i].get_st_bit() > st_bit)
+        {
+            insert_pos = i;
+            break;
+        }
+    }
+
+    item_new = new reg_base_name_item[sub_num+1];
+
+    for (int i = 0; i < sub_num+1; i++)
+    {
+        if (i < insert_pos)
+        {
+            item_new[i] = item[i];
+        }
+        else if (i == insert_pos)
+        {
+            int bit_overlap = 0;
+            if ((item[i-1].get_addr() == addr) && 
+                (st_bit <= item[i-1].get_ed_bit()))
+            {
+                bit_overlap = 1;
+            }
+            if ((item[i].get_addr() == addr) &&
+                (i != sub_num) &&
+                (ed_bit >= item[i].get_st_bit()))
+            {
+                bit_overlap = 1;
+            }
+            if (bit_overlap)
+            {
+                cout << "st_bit: " << st_bit << endl;
+                cout << "item[i-1].get_ed_bit(): " << item[i-1].get_ed_bit() << endl;
+                cout << "ed_bit: " << ed_bit << endl;
+                cout << "item[i].get_st_bit(): " << item[i].get_st_bit() << endl;
+                cout << "Register bits overlap! Please check the register list!" << endl;
+                return 1;
+            }
+        }
+        else
+        {
+            item_new[i] = item[i-1];
+        }
+    }
+    sub_num++;
+
+    return 0;
+}
+
+reg_base_addr::reg_base_addr()
+{
+    addr = -1;
+    sub_num = 0;
+    item = NULL;
+}
+
+reg_base_addr::reg_base_addr(const reg_base_addr &tmp)
+{
+    addr = tmp.addr;
+    sub_num = tmp.sub_num;
+    item = new reg_base_addr_item[sub_num];
+    for (int i = 0; i < sub_num; i++)
+    {
+        item[i] = tmp.item[i];
+    }
+}
+
+reg_base_addr::~reg_base_addr()
+{
+    if (sub_num != 0)
+    {
+        delete[] item;
+    }
+}
+
+reg_base_addr &reg_base_addr::operator=(const reg_base_addr &tmp)
+{
+    if (this == &tmp)
+    {
+        return *this;
+    }
+    if (sub_num != 0)
+    {
+        delete[] item;
+    }
+    addr = tmp.addr;
+    sub_num = tmp.sub_num;
+    item = new reg_base_addr_item[sub_num];
+    for (int i = 0; i < sub_num; i++)
+    {
+        item[i] = tmp.item[i];
+    }
+
+    return *this;
+}
+
+int reg_base_addr::create(string name    ,
+                          int addr       ,
+                          int st_bit     ,
+                          int ed_bit     ,
+                          int bus_st_bit ,
+                          int bus_ed_bit ,
+                          string attr    ,
+                          int def_val    )
+{
+    if (sub_num != 0)
+    {
+        return 1;
+    }
+    this->addr = addr;
+    this->sub_num = 1;
+    item = new reg_base_addr_item;
+    item->set_name(name);
+    item->set_st_bit(st_bit);
+    item->set_ed_bit(ed_bit);
+    item->set_bus_st_bit(bus_st_bit);
+    item->set_bus_ed_bit(bus_ed_bit);
+    item->set_attr(attr);
+    item->set_def_val(def_val);
+
+    return 0;
+}
+
+int reg_base_addr::append(string name    ,
+                          int st_bit     ,
+                          int ed_bit     ,
+                          int bus_st_bit ,
+                          int bus_ed_bit ,
+                          string attr    ,
+                          int def_val    )
+{
+    int insert_pos;
+    reg_base_addr_item *item_new;
+
+    for (int i = 0; i < sub_num; i++)
+    {
+        if ((item[i].get_name() == name) &&
+            (item[i].get_bus_st_bit() == (bus_ed_bit+1)) &&
+            (item[i].get_st_bit() == (ed_bit+1)) &&
+            (item[i].get_attr() == attr))
+        {
+            // direct merge
+            item[i].set_bus_st_bit(bus_st_bit);
+            item[i].set_st_bit(st_bit);
+            item[i].set_def_val((item[i].get_def_val() << (bus_ed_bit-bus_st_bit+1)) | def_val);
+            return 0;
+        }
+        else if ((item[i].get_name() == name) &&
+                 (item[i].get_bus_ed_bit() == (bus_st_bit-1)) &&
+                 (item[i].get_ed_bit() == (st_bit-1)) &&
+                 (item[i].get_attr() == attr))
+        {
+            // direct merge
+            item[i].set_bus_ed_bit(bus_ed_bit);
+            item[i].set_ed_bit(ed_bit);
+            item[i].set_def_val((def_val << (item[i].get_bus_ed_bit()-item[i].get_bus_st_bit()+1)) | item[i].get_def_val());
+            return 0;
+        }
+        else if (item[i].get_bus_st_bit() > bus_st_bit)
+        {
+            insert_pos = i;
+            break;
+        }
+    }
+
+    item_new = new reg_base_addr_item[sub_num+1];
+
+    for (int i = 0; i < sub_num+1; i++)
+    {
+        if (i < insert_pos)
+        {
+            item_new[i] = item[i];
+        }
+        else if (i == insert_pos)
+        {
+            int bit_overlap = 0;
+            if ((item[i-1].get_name() == name) &&
+                (bus_st_bit <= item[i-1].get_bus_ed_bit()))
+            {
+                bit_overlap = 1;
+            }
+            if ((item[i].get_name() == name) &&
+                (i != sub_num) &&
+                (bus_ed_bit >= item[i].get_bus_st_bit()))
+            {
+                bit_overlap = 1;
+            }
+            if (bit_overlap)
+            {
+                cout << "Register bits overlap! Please check the register list!" << endl;
+                return 1;
+            }
+        }
+        else
+        {
+            item_new[i] = item[i-1];
+        }
+    }
+    sub_num++;
+
+    return 0;
+}
 
 extern int parse_addr_val(string reg_addr, int &reg_addr_val);
 extern int parse_name_bitrange(string reg_fname, string &reg_name, int &st_bit, int &ed_bit);
@@ -14,6 +520,10 @@ int main(int argc, char *argv[])
 {
     ifstream reglist;
     ofstream verilog;
+
+    list<reg_base_name> reg_list_base_name;
+    list<reg_base_addr> reg_list_base_addr;
+
     string regline;
 
     string reg_addr;
@@ -62,11 +572,49 @@ int main(int argc, char *argv[])
         parse_busrange(reg_bits, reg_bus_st_bit, reg_bus_ed_bit);
         parse_defval(reg_def, reg_def_val);
 
-        cout << "0x" << hex << reg_addr_val << "\t"
-             << reg_name << dec << "[" << reg_ed_bit << ":" << reg_st_bit << "]" << "\t"
-             << reg_bus_ed_bit << ":" << reg_bus_st_bit << "\t"
-             << "'h" << hex << reg_def_val  << "\t"
-             << reg_attr << endl;
+        int insert_new_reg = 0;
+        if(reg_list_base_name.empty())
+        {
+            insert_new_reg = 1;
+        }
+        else
+        {
+            insert_new_reg = 1;
+            for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
+            {
+                if (iter->get_name() == reg_name)
+                {
+                    iter->append(reg_addr_val   ,
+                                 reg_st_bit     ,
+                                 reg_ed_bit     ,
+                                 reg_bus_st_bit ,
+                                 reg_bus_ed_bit ,
+                                 reg_attr       ,
+                                 reg_def_val    );
+                    insert_new_reg = 0;
+                    break;
+                }
+            }
+        }
+        if (insert_new_reg == 1)
+        {
+            reg_base_name *new_reg_base_name;
+            new_reg_base_name = new reg_base_name;
+            new_reg_base_name->create(reg_name       ,
+                                      reg_addr_val   ,
+                                      reg_st_bit     ,
+                                      reg_ed_bit     ,
+                                      reg_bus_st_bit ,
+                                      reg_bus_ed_bit ,
+                                      reg_attr       ,
+                                      reg_def_val    );
+            reg_list_base_name.push_back(*new_reg_base_name);
+        }
+    }
+
+    for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
+    {
+        cout << iter->get_name() << endl;
     }
 
     reglist.close();
