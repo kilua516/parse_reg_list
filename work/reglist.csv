@@ -1,0 +1,47 @@
+Address,Name,Bits,Default Value,Type,Description
+0x0,abc[15:0],31:16,0x0,RW,Relative Card Address (RCA). SD host uses this value to address the card
+,def[15:0],15:0,0xFF80,RW,IO OCR Register.
+0x4,ff,31:20,0x0,RO,RESERVED
+,dd,19:16,0x2,RW,SD Format
+,ee,15:12,0x0,RO,RESERVED
+,gg,11:8,0x3,RW,SDIO Version
+,hh,7:4,0x0,RO,RESERVED
+,def[19:16],3:0,0x2,RW,CCCR Format
+0x8,a,31:12,0x0,RO,RESERVED
+,b,11,0x0,RW,Memory present
+,c,10:8,0x1,RW,Number of functions supported
+,d,7,0x0,RW,RESERVED
+,e,6:0,0x1,RO,IO Function Ready
+0xC,f,31:15,0x0,RO,RESERVED
+,g,14,0x0,RW,4BLS – 4-bit support for Low-Speed cards
+,h,13,0x0,RW,LSC – Card is a Low-Speed card
+,I,12,0x1,RW,S4MI – Supports interrupt between blocks of data in 4-bit SD mode
+,j,11,0x1,RW,SBS – Card Supports SuspendResume
+,k,10,0x1,RW,SRW – Card Supports Read Wait
+,l,9,0x1,RW,SMB – Card Supports Multi-Block
+,m,8,0x1,RW,SDC – Card Supports Direct Commands during data transfer
+,Name,7:1,0x0,RO,RESERVED
+,o,0,0x0,RW,SCSI – Support Continuous SPI interrupt
+0x10,p,31:18,0x0,RO,RESERVED
+,q,17,0x1,RW,SHS – Support High-Speed
+,r,16,0x0,RW,SMPC – Support Master Power Control
+,s,15:0,0x0,RO,RESERVED
+0x14,t,31:16,0x0,RO,RESERVED
+,u,15:8,0x0,RW,Extended SDIO Standard Function Interface code for function 1.
+,v,7,0x0,RW,Function Supports CSA
+,w,6,0x0,RW,SPS – This bit indicates if the function has Power Selection
+,x,5:4,0x0,RO,RESERVED
+,y,3:0,0x4,RW,Function 1 standard code
+0x18,z,31:30,0x0,RO,RESERVED
+,aa,29:15,0x0,RW,"DMA Read Address Register. The value programmed in this register by the CPU is used as DMA base address for SDIO read transfers. The DMA address is calculated as –
+,ab,14:0,0x0,RW,"DMA Write Address Register. The value programmed in this register by the CPU
+0x1C,ac,31:1,0x0,RO,RESERVED
+,ad,0,0x0,RW,"Interrupt In emulate. By default this bit is set to 0. The host CPU writes this bit to 1 to emulate SDIO card interrupt. When this bit is set to 1, SDIO core generates card interrupt on SD bus. This bit is cleared to 0 when the SD host reads Interrupt pending register (0x05H) in CCCR."
+0x20,ae,31:2,0x0,RO,RESERVED
+,af,1,0x0,RO,Read Interrupt out status. By default this bit is set to 0. This bit is set to  1 when read DMA transfer (card to host) is complete. It is used to generate interrupt out to the host CPU to indicate DMA transfer completion.
+,ag,0,0x0,RO,Write Interrupt out status. By default this bit is set to 0. This bit is set to 1 when write DMA transfer (host to card) is complete. It is used to generate interrupt out to the host CPU to indicate DMA transfer completion.
+0x24,ah,31:1,0x0,RO,RESERVED
+,ai,0,0x0,RW,Interrupt out enable. By default this bit is set to 0. This bit should be set to 1 by host CPU to enable interrupt out generation on data transfer completion.
+0x28,aj,31:16,0x0,RO,RESERVED
+,ak,15:8,0x0,RW,TPLL1_MINOR
+,al,7:0,0x8,RW,TPLL1_MAJOR
