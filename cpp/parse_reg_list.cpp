@@ -91,6 +91,10 @@ public:
     reg_base_addr &operator=(const reg_base_addr &tmp);
     int get_sub_num();
     int get_addr();
+    string get_fname(int idx);
+    string get_attr(int idx);
+    int get_bus_st_bit(int idx);
+    int get_bus_ed_bit(int idx);
     int create(string name    ,
                int addr       ,
                int st_bit     ,
@@ -423,6 +427,42 @@ int reg_base_addr::get_addr()
     return addr;
 }
 
+string reg_base_addr::get_fname(int idx)
+{
+    string fname;
+    stringstream str;
+
+    if (item[idx].get_st_bit() == item[idx].get_ed_bit())
+    {
+        return item[idx].get_name();
+    }
+
+    str.clear();
+    str.str("");
+    str << item[idx].get_name()
+        << "[" << item[idx].get_ed_bit()
+        << ":" << item[idx].get_st_bit()
+        << "]";
+    str >> fname;
+
+    return fname;
+}
+
+string reg_base_addr::get_attr(int idx)
+{
+    return item[idx].get_attr();
+}
+
+int reg_base_addr::get_bus_st_bit(int idx)
+{
+    return item[idx].get_bus_st_bit();
+}
+
+int reg_base_addr::get_bus_ed_bit(int idx)
+{
+    return item[idx].get_bus_ed_bit();
+}
+
 int reg_base_addr::create(string name    ,
                           int addr       ,
                           int st_bit     ,
@@ -505,13 +545,11 @@ int reg_base_addr::append(string name    ,
         {
             int bit_overlap = 0;
             if ((i != 0) &&
-                (item[i-1].get_name() == name) &&
                 (bus_st_bit <= item[i-1].get_bus_ed_bit()))
             {
                 bit_overlap = 1;
             }
             if ((i != sub_num) &&
-                (item[i].get_name() == name) &&
                 (bus_ed_bit >= item[i].get_bus_st_bit()))
             {
                 bit_overlap = 1;
@@ -521,6 +559,13 @@ int reg_base_addr::append(string name    ,
                 cout << "Register bits overlap! Please check the register list!" << endl;
                 return 1;
             }
+            item_new[i].set_name(name);
+            item_new[i].set_st_bit(st_bit);
+            item_new[i].set_ed_bit(ed_bit);
+            item_new[i].set_bus_st_bit(bus_st_bit);
+            item_new[i].set_bus_ed_bit(bus_ed_bit);
+            item_new[i].set_attr(attr);
+            item_new[i].set_def_val(def_val);
         }
         else
         {
@@ -598,46 +643,50 @@ int main(int argc, char *argv[])
         parse_busrange(reg_bits, reg_bus_st_bit, reg_bus_ed_bit);
         parse_defval(reg_def, reg_def_val);
 
-        int insert_new_reg = 0;
-        if(reg_list_base_name.empty())
-        {
-            insert_new_reg = 1;
-        }
-        else
-        {
-            insert_new_reg = 1;
-            for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
-            {
-                if (iter->get_name() == reg_name)
-                {
-                    iter->append(reg_addr_val   ,
-                                 reg_st_bit     ,
-                                 reg_ed_bit     ,
-                                 reg_bus_st_bit ,
-                                 reg_bus_ed_bit ,
-                                 reg_attr       ,
-                                 reg_def_val    );
-                    insert_new_reg = 0;
-                    break;
-                }
-            }
-        }
-        if (insert_new_reg == 1)
-        {
-            reg_base_name *new_reg_base_name;
-            new_reg_base_name = new reg_base_name;
-            new_reg_base_name->create(reg_name       ,
-                                      reg_addr_val   ,
-                                      reg_st_bit     ,
-                                      reg_ed_bit     ,
-                                      reg_bus_st_bit ,
-                                      reg_bus_ed_bit ,
-                                      reg_attr       ,
-                                      reg_def_val    );
-            reg_list_base_name.push_back(*new_reg_base_name);
-        }
+//      int insert_new_reg = 0;
+//      if(reg_list_base_name.empty())
+//      {
+//          insert_new_reg = 1;
+//      }
+//      else
+//      {
+//          insert_new_reg = 1;
+//          iter_name = reg_list_base_name.begin();
+//          do
+//          {
+//              if (iter_name->get_name() == reg_name)
+//              {
+//                  cout << "append" << endl;
+//                  iter_name->append(reg_addr_val   ,
+//                                    reg_st_bit     ,
+//                                    reg_ed_bit     ,
+//                                    reg_bus_st_bit ,
+//                                    reg_bus_ed_bit ,
+//                                    reg_attr       ,
+//                                    reg_def_val    );
+//                  insert_new_reg = 0;
+//                  break;
+//              }
+//              iter_name++;
+//          }
+//          while (iter_name != reg_list_base_name.end());
+//      }
+//      if (insert_new_reg == 1)
+//      {
+//          reg_base_name *new_reg_base_name;
+//          new_reg_base_name = new reg_base_name;
+//          new_reg_base_name->create(reg_name       ,
+//                                    reg_addr_val   ,
+//                                    reg_st_bit     ,
+//                                    reg_ed_bit     ,
+//                                    reg_bus_st_bit ,
+//                                    reg_bus_ed_bit ,
+//                                    reg_attr       ,
+//                                    reg_def_val    );
+//          reg_list_base_name.push_back(*new_reg_base_name);
+//      }
 
-        insert_new_reg = 0;
+        int insert_new_reg = 0;
         if(reg_list_base_addr.empty())
         {
             insert_new_reg = 1;
@@ -676,19 +725,59 @@ int main(int argc, char *argv[])
             reg_list_base_addr.push_back(*new_reg_base_addr);
         }
     }
+    for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
+    {
+        for (int i = 0; i < iter->get_sub_num(); i++)
+        {
+            cout << "0x" << hex << iter->get_addr() << dec << "\t";
+            cout << iter->get_fname(i) << "\t";
+            cout << iter->get_attr(i) << "\t";
+            cout << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "\t";
+            cout << endl;
+        }
+    }
 
     verilog << "reg [" << reg_dw-1 << ":0] reg_dout;" << endl;
     verilog << "always @(*) begin" << endl;
     verilog << "    case (reg_addr)" << endl;
     for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
     {
-        verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << ": reg_dout = {";
-        for (int i = 0; i < iter->get_sub_num(); i++)
+        int zero_st;
+
+        verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << dec << ": reg_dout = {";
+        zero_st = reg_dw - 1;
+        for (int i = iter->get_sub_num()-1; i > 0; i--)
         {
-            verilog << "tt,";
+            if ((iter->get_attr(i) == "RW") ||
+                (iter->get_attr(i) == "RO"))
+            {
+                if (zero_st > iter->get_bus_ed_bit(i))
+                {
+                    verilog << (zero_st - iter->get_bus_ed_bit(i)) << "'b0, ";
+                }
+                verilog << iter->get_fname(i) << ", ";
+                zero_st = iter->get_bus_st_bit(i) - 1;
+            }
         }
-        verilog << "}" << endl;
+        if ((iter->get_attr(0) == "RW") ||
+            (iter->get_attr(0) == "RO"))
+        {
+            if (zero_st > iter->get_bus_ed_bit(0))
+            {
+                verilog << (zero_st - iter->get_bus_ed_bit(0)) << "'b0, ";
+            }
+            verilog << iter->get_fname(0);
+            zero_st = iter->get_bus_st_bit(0) - 1;
+            if (zero_st > 0)
+            {
+                verilog << ", " << zero_st << "'b0";
+            }
+        }
+        verilog << "};" << endl;
     }
+    verilog << "        default: reg_dout = 0;" << endl;
+    verilog << "    endcase" << endl;
+    verilog << "end" << endl;
 
     reglist.close();
     verilog.close();
