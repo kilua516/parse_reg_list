@@ -60,6 +60,7 @@ public:
     ~reg_base_name();
     reg_base_name &operator=(const reg_base_name &tmp);
     int get_sub_num();
+    int set_name(string name);
     string get_name();
     int get_addr(int idx);
     string get_fname(int idx);
@@ -261,6 +262,11 @@ reg_base_name &reg_base_name::operator=(const reg_base_name &tmp)
 int reg_base_name::get_sub_num()
 {
     return sub_num;
+}
+
+int reg_base_name::set_name(string name)
+{
+    this->name = name;
 }
 
 string reg_base_name::get_name()
@@ -675,6 +681,14 @@ int main(int argc, char *argv[])
 {
     int reg_dw = 32;
     int reg_aw = 8;
+    string module = "regs";
+    string io_clk = "clk";
+    string io_rst_n = "rst_n";
+    string io_reg_din = "reg_din";
+    string io_reg_dout = "reg_dout";
+    string io_reg_addr = "reg_addr";
+    string io_reg_wr = "reg_wr";
+    string nb_assign = "<= `RD";
     ifstream reglist;
     ofstream verilog;
 
@@ -747,6 +761,11 @@ int main(int argc, char *argv[])
             {
                 if (iter->get_name() == reg_name)
                 {
+                    if (iter->get_attr(0) != reg_attr)
+                    {
+                        cout << "Warning! The attribute of the new register to be appended is different with the exist one" << endl;
+                        cout << "  Register Name is \"" << reg_name << "\"" << endl;
+                    }
                     iter->append(reg_addr_val   ,
                                  reg_st_bit     ,
                                  reg_ed_bit     ,
@@ -763,15 +782,18 @@ int main(int argc, char *argv[])
         {
             reg_base_name *new_reg_base_name;
             new_reg_base_name = new reg_base_name;
-            new_reg_base_name->create(reg_name       ,
-                                      reg_addr_val   ,
-                                      reg_st_bit     ,
-                                      reg_ed_bit     ,
-                                      reg_bus_st_bit ,
-                                      reg_bus_ed_bit ,
-                                      reg_attr       ,
-                                      reg_def_val    );
-            reg_list_base_name.push_back(*new_reg_base_name);
+            if (reg_name != "-")
+            {
+                new_reg_base_name->create(reg_name       ,
+                                          reg_addr_val   ,
+                                          reg_st_bit     ,
+                                          reg_ed_bit     ,
+                                          reg_bus_st_bit ,
+                                          reg_bus_ed_bit ,
+                                          reg_attr       ,
+                                          reg_def_val    );
+                reg_list_base_name.push_back(*new_reg_base_name);
+            }
         }
 
         insert_new_reg = 0;
@@ -826,6 +848,108 @@ int main(int argc, char *argv[])
 //  }
 
 //---------------------------------------------------------------
+//                    io define
+//---------------------------------------------------------------
+    verilog << "module " << module << "(" << endl;
+    verilog << "  // bus interface" << endl;
+    verilog << "  input " << io_clk << "," << endl;
+    verilog << "  input " << io_rst_n << "," << endl;
+    if (reg_dw > 1)
+    {
+        verilog << "  input [" << reg_dw-1 << ":0] " << io_reg_din << "," << endl;
+        verilog << "  output [" << reg_dw-1 << ":0] " << io_reg_dout << "," << endl;
+    }
+    else
+    {
+        verilog << "  input " << io_reg_din << "," << endl;
+        verilog << "  output " << io_reg_dout << "," << endl;
+    }
+    if (reg_aw > 1)
+    {
+        verilog << "  input [" << reg_aw-1 << ":0] " << io_reg_addr << "," << endl;
+    }
+    else
+    {
+        verilog << "  input " << io_reg_addr << "," << endl;
+    }
+    verilog << "  input " << io_reg_wr << "," << endl;
+    verilog << endl;
+    verilog << "  // reg interface" << endl;
+    for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
+    {
+        if (iter->get_name() == "-")
+        {
+            continue;
+        }
+        if (iter->get_attr(0) == "RO")
+        {
+            verilog << "  input ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name();
+        }
+        else if (iter->get_attr(0) == "W1C")
+        {
+            verilog << "  input ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name() << "," << endl;
+            verilog << "  output ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name() << "_clr";
+        }
+        else if (iter->get_attr(0) == "WP")
+        {
+            verilog << "  output ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name();
+        }
+        else if (iter->get_attr(0) == "RW")
+        {
+            verilog << "  output ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name();
+        }
+        else
+        {
+            cout << "Invalid Register Attribute! Please Check!" << endl;
+            cout << "  Register Name is \"" << iter->get_name() << "\"" << endl;
+        }
+        iter++;
+        if (iter != reg_list_base_name.end())
+        {
+            verilog << ",";
+        }
+        verilog << endl;
+        iter--;
+    }
+
+    verilog << "  );" << endl;
+    verilog << endl;
+
+//---------------------------------------------------------------
+//                    address decode
+//---------------------------------------------------------------
+    for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
+    {
+        verilog << "wire wr_addr_" << hex << iter->get_addr() << " = " << io_reg_wr << " & (" << io_reg_addr << " == " << reg_aw << "'h" << iter->get_addr() << ");" << endl;
+    }
+    verilog << dec << endl;
+
+//---------------------------------------------------------------
 //                    write logic
 //---------------------------------------------------------------
     for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
@@ -834,60 +958,74 @@ int main(int argc, char *argv[])
         {
             continue;
         }
-        verilog << "reg ";
-        if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+        if ((iter->get_attr(0) == "W1C") ||
+            (iter->get_attr(0) == "WP") ||
+            (iter->get_attr(0) == "RW"))
         {
-            verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            verilog << "reg ";
+            if (iter->get_ed_bit(iter->get_sub_num()-1) != iter->get_st_bit(0))
+            {
+                verilog << "[" << iter->get_ed_bit(iter->get_sub_num()-1) << ":" << iter->get_st_bit(0) << "] ";
+            }
+            verilog << iter->get_name();
+            if (iter->get_attr(0) == "W1C")
+            {
+                verilog << "_clr";
+            }
+            verilog << ";" << endl;
         }
-        verilog << iter->get_name() << ";" << endl;
         for (int i = 0; i < iter->get_sub_num(); i++)
         {
-            if (iter->get_attr(i) == "WC")
+            if (iter->get_attr(i) == "W1C")
             {
+                string tmp_name;
                 verilog << "always @(*) begin" << endl;
+                tmp_name = iter->get_name();
+                iter->set_name(tmp_name+"_clr");
                 if (iter->get_ed_bit(i) != iter->get_st_bit(i))
                 {
-                    verilog << "    " << iter->get_fname(i) << " = {" << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "{wr_addr_" << hex << iter->get_addr(i) << "}} & reg_din[" << iter->get_st_bit(i) << "]" << endl;
+                    verilog << "    " << iter->get_fname(i) << " = {" << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "{wr_addr_" << hex << iter->get_addr(i) << "}} & " << io_reg_din << "[" << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "];" << endl;
                 }
                 else
                 {
-                    verilog << "    " << iter->get_fname(i) << " = wr_addr_" << hex << iter->get_addr(i) << dec << " & reg_din[" << iter->get_st_bit(i) << "]" << endl;
+                    verilog << "    " << iter->get_fname(i) << " = wr_addr_" << hex << iter->get_addr(i) << dec << " & " << io_reg_din << "[" << iter->get_bus_st_bit(i) << "];" << endl;
                 }
+                iter->set_name(tmp_name);
                 verilog << "end" << endl;
                 verilog << endl;
             }
             else if (iter->get_attr(i) == "WP")
             {
-                verilog << "always @(posedge clk or negedge rst_n) begin" << endl;
-                verilog << "    if (~rst_n)" << endl;
-                verilog << "        " << iter->get_fname(i) << " <= " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
+                verilog << "always @(posedge " << io_clk << " or negedge " << io_rst_n << ") begin" << endl;
+                verilog << "    if (~" << io_rst_n << ")" << endl;
+                verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
                 verilog << "    else if (wr_addr_" << hex << iter->get_addr(i) << dec << ")" << endl;
                 if (iter->get_ed_bit(i) != iter->get_st_bit(i))
                 {
-                    verilog << "        " << iter->get_fname(i) << " <= " << "reg_din[" << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "];" << endl;
+                    verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << io_reg_din << "[" << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "];" << endl;
                 }
                 else
                 {
-                    verilog << "        " << iter->get_fname(i) << " <= " << "reg_din[" << iter->get_bus_ed_bit(i) << "];" << endl;
+                    verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << io_reg_din << "[" << iter->get_bus_ed_bit(i) << "];" << endl;
                 }
                 verilog << "    else" << endl;
-                verilog << "        " << iter->get_fname(i) << " <= " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
+                verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
                 verilog << "end" << endl;
                 verilog << endl;
             }
             else if (iter->get_attr(i) == "RW")
             {
-                verilog << "always @(posedge clk or negedge rst_n) begin" << endl;
-                verilog << "    if (~rst_n)" << endl;
-                verilog << "        " << iter->get_fname(i) << " <= " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
+                verilog << "always @(posedge " << io_clk << " or negedge " << io_rst_n << ") begin" << endl;
+                verilog << "    if (~" << io_rst_n << ")" << endl;
+                verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << (iter->get_ed_bit(i)-iter->get_st_bit(i)+1) << "'h" << hex << iter->get_def_val(i) << dec << ";" << endl;
                 verilog << "    else if (wr_addr_" << hex << iter->get_addr(i) << dec << ")" << endl;
                 if (iter->get_ed_bit(i) != iter->get_st_bit(i))
                 {
-                    verilog << "        " << iter->get_fname(i) << " <= " << "reg_din[" << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "];" << endl;
+                    verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << io_reg_din << "[" << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "];" << endl;
                 }
                 else
                 {
-                    verilog << "        " << iter->get_fname(i) << " <= " << "reg_din[" << iter->get_bus_ed_bit(i) << "];" << endl;
+                    verilog << "        " << iter->get_fname(i) << " " << nb_assign << " " << io_reg_din << "[" << iter->get_bus_ed_bit(i) << "];" << endl;
                 }
                 verilog << "end" << endl;
                 verilog << endl;
@@ -901,12 +1039,12 @@ int main(int argc, char *argv[])
 //---------------------------------------------------------------
 //                    read logic
 //---------------------------------------------------------------
-    verilog << "reg [" << reg_dw-1 << ":0] reg_dout;" << endl;
+    verilog << "reg [" << reg_dw-1 << ":0] " << io_reg_dout << ";" << endl;
     verilog << "always @(*) begin" << endl;
-    verilog << "    case (reg_addr)" << endl;
+    verilog << "    case (" << io_reg_addr << ")" << endl;
     for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
     {
-        verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << dec << ": reg_dout = {";
+        verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << dec << ": " << io_reg_dout << " = {";
         for (int i = iter->get_sub_num()-1; i > 0; i--)
         {
             if (iter->get_name(i) == "-")
@@ -916,7 +1054,8 @@ int main(int argc, char *argv[])
                 verilog << bit_width << "'h" << iter->get_def_val(i) << ", ";
             }
             else if ((iter->get_attr(i) == "RW") ||
-                     (iter->get_attr(i) == "RO"))
+                     (iter->get_attr(i) == "RO") ||
+                     (iter->get_attr(i) == "W1C"))
             {
                 verilog << iter->get_fname(i) << ", ";
             }
@@ -934,7 +1073,8 @@ int main(int argc, char *argv[])
             verilog << bit_width << "'h" << iter->get_def_val(0);
         }
         else if ((iter->get_attr(0) == "RW") ||
-            (iter->get_attr(0) == "RO"))
+                 (iter->get_attr(0) == "RO") ||
+                 (iter->get_attr(0) == "W1C"))
         {
             verilog << iter->get_fname(0);
         }
@@ -946,12 +1086,15 @@ int main(int argc, char *argv[])
         }
         verilog << "};" << endl;
     }
-    verilog << "        default: reg_dout = 0;" << endl;
+    verilog << "        default: " << io_reg_dout << " = 0;" << endl;
     verilog << "    endcase" << endl;
     verilog << "end" << endl;
+    verilog << endl;
 //---------------------------------------------------------------
 //                read logic end
 //---------------------------------------------------------------
+
+    verilog << "endmodule" << endl;
 
     reglist.close();
     verilog.close();
