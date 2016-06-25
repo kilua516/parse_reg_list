@@ -88,6 +88,7 @@ public:
     reg_base_addr(const reg_base_addr &tmp);
     ~reg_base_addr();
     reg_base_addr &operator=(const reg_base_addr &tmp);
+    int get_addr();
     int create(string name    ,
                int addr       ,
                int st_bit     ,
@@ -261,14 +262,14 @@ int reg_base_name::create(string name    ,
     }
     this->name = name;
     this->sub_num = 1;
-    item = new reg_base_name_item;
-    item->set_addr(addr);
-    item->set_st_bit(st_bit);
-    item->set_ed_bit(ed_bit);
-    item->set_bus_st_bit(bus_st_bit);
-    item->set_bus_ed_bit(bus_ed_bit);
-    item->set_attr(attr);
-    item->set_def_val(def_val);
+    this->item = new reg_base_name_item;
+    this->item->set_addr(addr);
+    this->item->set_st_bit(st_bit);
+    this->item->set_ed_bit(ed_bit);
+    this->item->set_bus_st_bit(bus_st_bit);
+    this->item->set_bus_ed_bit(bus_ed_bit);
+    this->item->set_attr(attr);
+    this->item->set_def_val(def_val);
 
     return 0;
 }
@@ -284,6 +285,7 @@ int reg_base_name::append(int addr       ,
     int insert_pos;
     reg_base_name_item *item_new;
 
+    insert_pos = sub_num;
     for (int i = 0; i < sub_num; i++)
     {
         if ((item[i].get_addr() == addr) &&
@@ -326,13 +328,14 @@ int reg_base_name::append(int addr       ,
         else if (i == insert_pos)
         {
             int bit_overlap = 0;
-            if ((item[i-1].get_addr() == addr) && 
+            if ((i != 0) &&
+                (item[i-1].get_addr() == addr) && 
                 (st_bit <= item[i-1].get_ed_bit()))
             {
                 bit_overlap = 1;
             }
-            if ((item[i].get_addr() == addr) &&
-                (i != sub_num) &&
+            if ((i != sub_num) &&
+                (item[i].get_addr() == addr) &&
                 (ed_bit >= item[i].get_st_bit()))
             {
                 bit_overlap = 1;
@@ -352,6 +355,9 @@ int reg_base_name::append(int addr       ,
             item_new[i] = item[i-1];
         }
     }
+
+    delete[] item;
+    item = item_new;
     sub_num++;
 
     return 0;
@@ -404,6 +410,11 @@ reg_base_addr &reg_base_addr::operator=(const reg_base_addr &tmp)
     return *this;
 }
 
+int reg_base_addr::get_addr()
+{
+    return addr;
+}
+
 int reg_base_addr::create(string name    ,
                           int addr       ,
                           int st_bit     ,
@@ -419,14 +430,14 @@ int reg_base_addr::create(string name    ,
     }
     this->addr = addr;
     this->sub_num = 1;
-    item = new reg_base_addr_item;
-    item->set_name(name);
-    item->set_st_bit(st_bit);
-    item->set_ed_bit(ed_bit);
-    item->set_bus_st_bit(bus_st_bit);
-    item->set_bus_ed_bit(bus_ed_bit);
-    item->set_attr(attr);
-    item->set_def_val(def_val);
+    this->item = new reg_base_addr_item;
+    this->item->set_name(name);
+    this->item->set_st_bit(st_bit);
+    this->item->set_ed_bit(ed_bit);
+    this->item->set_bus_st_bit(bus_st_bit);
+    this->item->set_bus_ed_bit(bus_ed_bit);
+    this->item->set_attr(attr);
+    this->item->set_def_val(def_val);
 
     return 0;
 }
@@ -442,6 +453,7 @@ int reg_base_addr::append(string name    ,
     int insert_pos;
     reg_base_addr_item *item_new;
 
+    insert_pos = sub_num;
     for (int i = 0; i < sub_num; i++)
     {
         if ((item[i].get_name() == name) &&
@@ -474,7 +486,7 @@ int reg_base_addr::append(string name    ,
     }
 
     item_new = new reg_base_addr_item[sub_num+1];
-
+  
     for (int i = 0; i < sub_num+1; i++)
     {
         if (i < insert_pos)
@@ -484,13 +496,14 @@ int reg_base_addr::append(string name    ,
         else if (i == insert_pos)
         {
             int bit_overlap = 0;
-            if ((item[i-1].get_name() == name) &&
+            if ((i != 0) &&
+                (item[i-1].get_name() == name) &&
                 (bus_st_bit <= item[i-1].get_bus_ed_bit()))
             {
                 bit_overlap = 1;
             }
-            if ((item[i].get_name() == name) &&
-                (i != sub_num) &&
+            if ((i != sub_num) &&
+                (item[i].get_name() == name) &&
                 (bus_ed_bit >= item[i].get_bus_st_bit()))
             {
                 bit_overlap = 1;
@@ -506,6 +519,9 @@ int reg_base_addr::append(string name    ,
             item_new[i] = item[i-1];
         }
     }
+
+    delete[] item;
+    item = item_new;
     sub_num++;
 
     return 0;
@@ -610,11 +626,45 @@ int main(int argc, char *argv[])
                                       reg_def_val    );
             reg_list_base_name.push_back(*new_reg_base_name);
         }
-    }
 
-    for (list<reg_base_name>::iterator iter = reg_list_base_name.begin(); iter != reg_list_base_name.end(); ++iter)
-    {
-        cout << iter->get_name() << endl;
+        insert_new_reg = 0;
+        if(reg_list_base_addr.empty())
+        {
+            insert_new_reg = 1;
+        }
+        else
+        {
+            insert_new_reg = 1;
+            for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
+            {
+                if (iter->get_addr() == reg_addr_val)
+                {
+                    iter->append(reg_name       ,
+                                 reg_st_bit     ,
+                                 reg_ed_bit     ,
+                                 reg_bus_st_bit ,
+                                 reg_bus_ed_bit ,
+                                 reg_attr       ,
+                                 reg_def_val    );
+                    insert_new_reg = 0;
+                    break;
+                }
+            }
+        }
+        if (insert_new_reg == 1)
+        {
+            reg_base_addr *new_reg_base_addr;
+            new_reg_base_addr = new reg_base_addr;
+            new_reg_base_addr->create(reg_name       ,
+                                      reg_addr_val   ,
+                                      reg_st_bit     ,
+                                      reg_ed_bit     ,
+                                      reg_bus_st_bit ,
+                                      reg_bus_ed_bit ,
+                                      reg_attr       ,
+                                      reg_def_val    );
+            reg_list_base_addr.push_back(*new_reg_base_addr);
+        }
     }
 
     reglist.close();
