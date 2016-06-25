@@ -59,6 +59,7 @@ public:
     reg_base_name(const reg_base_name &tmp);
     ~reg_base_name();
     reg_base_name &operator=(const reg_base_name &tmp);
+    int get_sub_num();
     string get_name();
     int create(string name    ,
                int addr       ,
@@ -88,6 +89,7 @@ public:
     reg_base_addr(const reg_base_addr &tmp);
     ~reg_base_addr();
     reg_base_addr &operator=(const reg_base_addr &tmp);
+    int get_sub_num();
     int get_addr();
     int create(string name    ,
                int addr       ,
@@ -242,6 +244,11 @@ reg_base_name &reg_base_name::operator=(const reg_base_name &tmp)
     return *this;
 }
 
+int reg_base_name::get_sub_num()
+{
+    return sub_num;
+}
+
 string reg_base_name::get_name()
 {
     return name;
@@ -342,10 +349,6 @@ int reg_base_name::append(int addr       ,
             }
             if (bit_overlap)
             {
-                cout << "st_bit: " << st_bit << endl;
-                cout << "item[i-1].get_ed_bit(): " << item[i-1].get_ed_bit() << endl;
-                cout << "ed_bit: " << ed_bit << endl;
-                cout << "item[i].get_st_bit(): " << item[i].get_st_bit() << endl;
                 cout << "Register bits overlap! Please check the register list!" << endl;
                 return 1;
             }
@@ -408,6 +411,11 @@ reg_base_addr &reg_base_addr::operator=(const reg_base_addr &tmp)
     }
 
     return *this;
+}
+
+int reg_base_addr::get_sub_num()
+{
+    return sub_num;
 }
 
 int reg_base_addr::get_addr()
@@ -534,6 +542,8 @@ extern int parse_defval(string reg_def, int &reg_def_val);
 
 int main(int argc, char *argv[])
 {
+    int reg_dw = 32;
+    int reg_aw = 8;
     ifstream reglist;
     ofstream verilog;
 
@@ -665,6 +675,19 @@ int main(int argc, char *argv[])
                                       reg_def_val    );
             reg_list_base_addr.push_back(*new_reg_base_addr);
         }
+    }
+
+    verilog << "reg [" << reg_dw-1 << ":0] reg_dout;" << endl;
+    verilog << "always @(*) begin" << endl;
+    verilog << "    case (reg_addr)" << endl;
+    for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
+    {
+        verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << ": reg_dout = {";
+        for (int i = 0; i < iter->get_sub_num(); i++)
+        {
+            verilog << "tt,";
+        }
+        verilog << "}" << endl;
     }
 
     reglist.close();
