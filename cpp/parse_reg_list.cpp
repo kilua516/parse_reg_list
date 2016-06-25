@@ -91,10 +91,12 @@ public:
     reg_base_addr &operator=(const reg_base_addr &tmp);
     int get_sub_num();
     int get_addr();
+    string get_name(int idx);
     string get_fname(int idx);
     string get_attr(int idx);
     int get_bus_st_bit(int idx);
     int get_bus_ed_bit(int idx);
+    int get_def_val(int idx);
     int create(string name    ,
                int addr       ,
                int st_bit     ,
@@ -427,6 +429,11 @@ int reg_base_addr::get_addr()
     return addr;
 }
 
+string reg_base_addr::get_name(int idx)
+{
+    return item[idx].get_name();
+}
+
 string reg_base_addr::get_fname(int idx)
 {
     string fname;
@@ -461,6 +468,11 @@ int reg_base_addr::get_bus_st_bit(int idx)
 int reg_base_addr::get_bus_ed_bit(int idx)
 {
     return item[idx].get_bus_ed_bit();
+}
+
+int reg_base_addr::get_def_val(int idx)
+{
+    return item[idx].get_def_val();
 }
 
 int reg_base_addr::create(string name    ,
@@ -725,53 +737,48 @@ int main(int argc, char *argv[])
             reg_list_base_addr.push_back(*new_reg_base_addr);
         }
     }
-    for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
-    {
-        for (int i = 0; i < iter->get_sub_num(); i++)
-        {
-            cout << "0x" << hex << iter->get_addr() << dec << "\t";
-            cout << iter->get_fname(i) << "\t";
-            cout << iter->get_attr(i) << "\t";
-            cout << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "\t";
-            cout << endl;
-        }
-    }
+//  for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
+//  {
+//      for (int i = 0; i < iter->get_sub_num(); i++)
+//      {
+//          cout << "0x" << hex << iter->get_addr() << dec << "\t";
+//          cout << iter->get_fname(i) << "\t";
+//          cout << iter->get_attr(i) << "\t";
+//          cout << iter->get_bus_ed_bit(i) << ":" << iter->get_bus_st_bit(i) << "\t";
+//          cout << endl;
+//      }
+//  }
 
     verilog << "reg [" << reg_dw-1 << ":0] reg_dout;" << endl;
     verilog << "always @(*) begin" << endl;
     verilog << "    case (reg_addr)" << endl;
     for (list<reg_base_addr>::iterator iter = reg_list_base_addr.begin(); iter != reg_list_base_addr.end(); ++iter)
     {
-        int zero_st;
-
         verilog << "        " << reg_aw << "'h" << hex << iter->get_addr() << dec << ": reg_dout = {";
-        zero_st = reg_dw - 1;
         for (int i = iter->get_sub_num()-1; i > 0; i--)
         {
-            if ((iter->get_attr(i) == "RW") ||
-                (iter->get_attr(i) == "RO"))
+            if (iter->get_name(i) == "-")
             {
-                if (zero_st > iter->get_bus_ed_bit(i))
-                {
-                    verilog << (zero_st - iter->get_bus_ed_bit(i)) << "'b0, ";
-                }
+                int bit_width;
+                bit_width = iter->get_bus_ed_bit(i)-iter->get_bus_st_bit(i)+1;
+                verilog << bit_width << "'h" << iter->get_def_val(i) << ", ";
+            }
+            else if ((iter->get_attr(i) == "RW") ||
+                     (iter->get_attr(i) == "RO"))
+            {
                 verilog << iter->get_fname(i) << ", ";
-                zero_st = iter->get_bus_st_bit(i) - 1;
             }
         }
-        if ((iter->get_attr(0) == "RW") ||
+        if (iter->get_name(0) == "-")
+        {
+            int bit_width;
+            bit_width = iter->get_bus_ed_bit(0)-iter->get_bus_st_bit(0)+1;
+            verilog << bit_width << "'h" << iter->get_def_val(0);
+        }
+        else if ((iter->get_attr(0) == "RW") ||
             (iter->get_attr(0) == "RO"))
         {
-            if (zero_st > iter->get_bus_ed_bit(0))
-            {
-                verilog << (zero_st - iter->get_bus_ed_bit(0)) << "'b0, ";
-            }
             verilog << iter->get_fname(0);
-            zero_st = iter->get_bus_st_bit(0) - 1;
-            if (zero_st > 0)
-            {
-                verilog << ", " << zero_st << "'b0";
-            }
         }
         verilog << "};" << endl;
     }
